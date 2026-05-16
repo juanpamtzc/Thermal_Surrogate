@@ -1,25 +1,22 @@
-# Python & Environments
-__pycache__/
-*.py[cod]
-.env
-sciml_thermal/
+# Generative AI Thermal Surrogate & Inverse Design
 
-# PyTorch & ML Checkpoints
-*.pt
-*.pth
-*.ckpt
-runs/
-wandb/
+This repository contains a 4-week Scientific Machine Learning (SciML) sprint designed to build a state-of-the-art Generative AI Thermal Surrogate Model. The project demonstrates the progression from baseline deep learning to physics-constrained and resolution-invariant neural operators for 2D Conjugate Heat Transfer (CHT) simulations.
 
-# OpenFOAM & Heavy Data
-01_OpenFOAM_Data/**/*.obj
-01_OpenFOAM_Data/**/*.vtm
-01_OpenFOAM_Data/**/*.vtk
-01_OpenFOAM_Data/**/processor*
-01_OpenFOAM_Data/**/postProcessing/
-*.h5
-*.npy
-*.npz
+## 🚀 The 4-Week Roadmap
 
-# OS generated files
-.DS_Store
+* [cite_start]**Week 1 (OpenFOAM Factory):** Automated generation of 2D Conjugate Heat Transfer simulations[cite: 1]. [cite_start]Extracted simulation data is mapped into PyTorch-ready tensors[cite: 2].
+* [cite_start]**Week 2 (CNN Baseline):** Implementation of a standard Convolutional Neural Network to predict the thermal field[cite: 2]. [cite_start]Includes documentation of model failure when pushed Out-of-Distribution (OOD)[cite: 3].
+* [cite_start]**Week 3 (PINN):** Deployment of a Physics-Informed Neural Network (PINN), embedding Navier-Stokes equations into the loss function to correct OOD hallucinations[cite: 3].
+* [cite_start]**Week 4 (FNO):** Implementation of a Fourier Neural Operator (FNO) to prove resolution invariance across varying mesh densities[cite: 4].
+
+## 📂 Repository Structure
+
+* [cite_start]`01_OpenFOAM_Data/`: CFD case templates, automation scripts, and mesh configurations.
+* [cite_start]`02_ML_Models/`: Deep learning core (Dataset parsers, CNN, PINN, FNO architectures).
+* [cite_start]`03_Notebooks_and_Viz/`: Jupyter notebooks for EDA, visual proofs, and metric comparisons.
+
+## 💻 Environment & Hardware
+
+* [cite_start]**OS:** Ubuntu Linux 
+* [cite_start]**Compute:** NVIDIA RTX 4070 (12GB VRAM) [cite: 16, 18]
+* **Stack:** OpenFOAM (Dockerized), PyTorch, Mamba
