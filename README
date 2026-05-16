@@ -1,0 +1,25 @@
+# Python & Environments
+__pycache__/
+*.py[cod]
+.env
+sciml_thermal/
+
+# PyTorch & ML Checkpoints
+*.pt
+*.pth
+*.ckpt
+runs/
+wandb/
+
+# OpenFOAM & Heavy Data
+01_OpenFOAM_Data/**/*.obj
+01_OpenFOAM_Data/**/*.vtm
+01_OpenFOAM_Data/**/*.vtk
+01_OpenFOAM_Data/**/processor*
+01_OpenFOAM_Data/**/postProcessing/
+*.h5
+*.npy
+*.npz
+
+# OS generated files
+.DS_Store
