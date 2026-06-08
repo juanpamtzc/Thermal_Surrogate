@@ -1,0 +1,44 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  10
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 1 0 0 0]; // SI Base Units: Kelvin
+
+internalField   uniform 300; // Initialize domain at 300 K
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform 300; // Cool fluid enters at 300 K
+    }
+    outlet
+    {
+        type            zeroGradient; // Heat flows out without restriction
+    }
+    bottomWall
+    {
+        type            zeroGradient; // Adiabatic (insulated)
+    }
+    topWall
+    {
+        type            zeroGradient; // Adiabatic (insulated)
+    }
+    frontAndBack
+    {
+        type            empty; // Enforces our 2D constraint
+    }
+}
+// ************************************************************************* //
