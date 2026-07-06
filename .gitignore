@@ -36,8 +36,9 @@ __pycache__/
 
 templates
 
-openfoam
 
 notebooks
 
 *png
+
+.vscode
