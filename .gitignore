@@ -33,3 +33,11 @@ models/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+templates
+
+openfoam
+
+notebooks
+
+*png
