@@ -90,14 +90,29 @@ with tab1:
         offset = st.slider("Fin Y-Center Offset (m)", -0.0015, 0.0015, 0.0, step=0.0005)
 
     with col2:
-        st.subheader("FNO Predicted Temperature Field")
         if model is not None:
             pred_T = run_interactive_inference(vel, length, offset)
             
-            fig, ax = plt.subplots(figsize=(10, 4))
-            im = ax.imshow(pred_T, cmap='inferno', aspect='auto', origin='lower')
-            fig.colorbar(im, ax=ax, label="Temperature (K)")
-            ax.set_title(f"Instantaneous Thermal Mapping (Inlet Vel: {vel:.2f} m/s)")
+            # --- Emulating your Notebook Plot ---
+            # Using your exact figsize proportions (scaled for a single panel)
+            fig, ax = plt.subplots(figsize=(12, 3)) 
+            
+            # Using your exact imshow arguments, plus the extent bounds we discussed
+            im = ax.imshow(
+                pred_T, 
+                cmap='inferno', 
+                aspect='auto', 
+                origin='lower',
+                extent=[STATS['x_min'], STATS['x_max'], STATS['y_min'], STATS['y_max']],
+                vmin=STATS['t_min'],  # See note below about percentiles
+                vmax=STATS['t_max']
+            )
+            
+            # Using your exact title and colorbar formatting
+            ax.set_title(f"FNO AI Prediction | Max Inlet Velocity: {vel:.2f} m/s", fontsize=12)
+            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Temp (K)")
+            
+            plt.tight_layout()
             st.pyplot(fig)
         else:
             st.warning("Model weights not loaded. Check the error message above.")
