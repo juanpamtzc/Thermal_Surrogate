@@ -5,7 +5,7 @@ __pycache__/
 sciml_thermal/
 
 # PyTorch & ML Checkpoints
-*.pt
+#*.pt
 *.pth
 *.ckpt
 runs/
@@ -27,7 +27,7 @@ wandb/
 # Ignore data and heavy simulation runs
 data/
 openfoam/runs/
-models/
+
 
 # Ignore Python cache
 __pycache__/
