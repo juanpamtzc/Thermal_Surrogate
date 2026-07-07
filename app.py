@@ -14,13 +14,12 @@ st.set_page_config(page_title="SciML Thermal Surrogate", layout="wide")
 # ---------------------------------------------------------
 # 1. Old Model Statistics (UPDATE THESE LATER)
 # ---------------------------------------------------------
-# These are dummy stats to prevent crashes. The model will run, 
-# but the predictions might look weird until you put your actual old stats here!
 STATS = {
-    't_min': 293.15, 't_max': 380.0, 
+    't_min': 293.15, 't_max': 380.00,  # <-- Match your dataset's min/max Kelvin bounds
     'u_min': 0.1,    'u_max': 0.6,
     'x_min': 0.0,    'x_max': 0.2,
-    'y_min': -0.05,  'y_max': 0.05,
+    'y_min': -0.05,  # Note: your grid y ranges symmetrically across the channel center
+    'y_max': 0.05,
 }
 
 # ---------------------------------------------------------
@@ -44,33 +43,56 @@ model, device = load_surrogate_model()
 # 3. Dynamic Interactive Generation Helper
 # ---------------------------------------------------------
 def run_interactive_inference(vel, length, offset):
-    """Generates an on-the-fly grid so no external files are needed."""
-    # 1. Create a basic 64x64 analytical grid
-    x = np.linspace(0, 0.2, 64)
-    y = np.linspace(-0.05, 0.05, 64)
+    """
+    Synthesizes the 4-channel input exactly matching your dataset structure,
+    evaluates the model, and scales it back to true physical dimensions.
+    """
+    # 1. Regenerate coordinate meshes matching dataset dimensions
+    x = np.linspace(STATS['x_min'], STATS['x_max'], 64)
+    y = np.linspace(STATS['y_min'], STATS['y_max'], 64)
     grid_x, grid_y = np.meshgrid(x, y)
     
-    # 2. Dummy Geometry Mask (All 1s for now, replace with your fin logic later)
+    # 2. Build the Geometry Mask dynamically based on slider values
+    # Let's say fin thickness matches your training geometry (e.g., 0.02m)
     geom_mask = np.ones((64, 64))
+    fin_thickness = 0.02  
     
-    # 3. Assign velocity channel
-    u_inlet = np.zeros((64, 64))
-    u_inlet[:, 0] = vel  # Assuming inlet is at x=0
+    # Solid domain boundary calculation
+    y_lower = offset - (fin_thickness / 2.0)
+    y_upper = offset + (fin_thickness / 2.0)
     
-    # 4. Normalize
+    # Mark pixels inside the solid fin as 0
+    mask_condition = (grid_x <= length) & (grid_y >= y_lower) & (grid_y <= y_upper)
+    geom_mask[mask_condition] = 0.0
+                    
+    # 3. Create the input velocity array (constant value across domain)
+    u_inlet = np.ones((64, 64)) * vel
+    
+    # 4. Apply Min-Max Normalization exactly matching your dataset.py
     u_inlet_norm = (u_inlet - STATS['u_min']) / (STATS['u_max'] - STATS['u_min'] + 1e-8)
     grid_x_norm = (grid_x - STATS['x_min']) / (STATS['x_max'] - STATS['x_min'] + 1e-8)
     grid_y_norm = (grid_y - STATS['y_min']) / (STATS['y_max'] - STATS['y_min'] + 1e-8)
     
-    # 5. Stack and run forward pass
-    input_channels = np.stack([geom_mask, u_inlet_norm, grid_x_norm, grid_y_norm], axis=0)
-    X_tensor = torch.from_numpy(input_channels).float().unsqueeze(0).to(device)
+    # 5. Collate, stack channels, and process tensor shapes
+    input_channels = [
+        geom_mask.astype(np.float32),
+        u_inlet_norm.astype(np.float32),
+        grid_x_norm.astype(np.float32),
+        grid_y_norm.astype(np.float32)
+    ]
+    X_array = np.stack(input_channels, axis=0)
+    X_tensor = torch.from_numpy(X_array).float().unsqueeze(0).to(device)
     
+    # 6. Model Evaluation
     with torch.no_grad():
         pred_T_norm = model(X_tensor).squeeze().cpu().numpy()
         
-    # 6. Reverse normalization back to Kelvin
+    # 7. Un-normalize output tensor back to Kelvin physical scale
     pred_T = pred_T_norm * (STATS['t_max'] - STATS['t_min']) + STATS['t_min']
+    
+    # 8. Force solid structure bounds to zero or base temp to match your notebook's dead zones
+    pred_T[geom_mask == 0.0] = 0.0 
+    
     return pred_T
 
 # ---------------------------------------------------------
@@ -90,32 +112,28 @@ with tab1:
         offset = st.slider("Fin Y-Center Offset (m)", -0.0015, 0.0015, 0.0, step=0.0005)
 
     with col2:
+        st.subheader("FNO Predicted Temperature Field")
         if model is not None:
             pred_T = run_interactive_inference(vel, length, offset)
             
-            # --- Emulating your Notebook Plot ---
-            # Using your exact figsize proportions (scaled for a single panel)
-            fig, ax = plt.subplots(figsize=(12, 3)) 
+            fig, ax = plt.subplots(figsize=(12, 4))
             
-            # Using your exact imshow arguments, plus the extent bounds we discussed
+            # Using your exact inferno color mapping & extent parameters
             im = ax.imshow(
                 pred_T, 
                 cmap='inferno', 
                 aspect='auto', 
                 origin='lower',
                 extent=[STATS['x_min'], STATS['x_max'], STATS['y_min'], STATS['y_max']],
-                vmin=STATS['t_min'],  # See note below about percentiles
+                vmin=STATS['t_min'], 
                 vmax=STATS['t_max']
             )
             
-            # Using your exact title and colorbar formatting
-            ax.set_title(f"FNO AI Prediction | Max Inlet Velocity: {vel:.2f} m/s", fontsize=12)
+            ax.set_title(f"FNO AI Prediction\nInlet Velocity: {vel:.2f} m/s", fontsize=12)
             fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Temp (K)")
             
             plt.tight_layout()
             st.pyplot(fig)
-        else:
-            st.warning("Model weights not loaded. Check the error message above.")
 
 with tab2:
     st.subheader("Model Validation against Ground Truth CFD")
