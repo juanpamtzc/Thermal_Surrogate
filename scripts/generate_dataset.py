@@ -19,11 +19,11 @@ os.makedirs(TEST_DIR, exist_ok=True)
 # Velocity: 0.5 to 5.0 m/s
 # Length: 0.05 to 0.15 m
 # Fin 2 Y-Center: -0.0015 to 0.0015 m (limits movement so it doesn't collide with Fin 1 or 3)
-bounds_min = [0.5, 0.05, -0.0015] 
-bounds_max = [5.0, 0.15,  0.0015] 
+bounds_min = [0.1, 0.01, -0.0015] 
+bounds_max = [0.6, 0.115,  0.0015] 
 
-N_TRAIN = 150
-N_TEST = 30
+N_TRAIN = 250
+N_TEST = 50
 TOTAL_SAMPLES = N_TRAIN + N_TEST
 
 # Generate LHS Samples for the ENTIRE dataset at once
