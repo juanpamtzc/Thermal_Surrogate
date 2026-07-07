@@ -12,13 +12,13 @@ from src.model import ThermalFNO
 st.set_page_config(page_title="SciML Thermal Surrogate", layout="wide")
 
 # ---------------------------------------------------------
-# 1. Old Model Statistics (UPDATE THESE LATER)
+# 1. Model Statistics
 # ---------------------------------------------------------
 STATS = {
-    't_min': 293.15, 't_max': 380.00,  # <-- Match your dataset's min/max Kelvin bounds
+    't_min': 293.15, 't_max': 380.00,  
     'u_min': 0.1,    'u_max': 0.6,
     'x_min': 0.0,    'x_max': 0.2,
-    'y_min': -0.05,  # Note: your grid y ranges symmetrically across the channel center
+    'y_min': -0.05,  
     'y_max': 0.05,
 }
 
@@ -53,7 +53,6 @@ def run_interactive_inference(vel, length, offset):
     grid_x, grid_y = np.meshgrid(x, y)
     
     # 2. Build the Geometry Mask dynamically based on slider values
-    # Let's say fin thickness matches your training geometry (e.g., 0.02m)
     geom_mask = np.ones((64, 64))
     fin_thickness = 0.02  
     
@@ -90,7 +89,7 @@ def run_interactive_inference(vel, length, offset):
     # 7. Un-normalize output tensor back to Kelvin physical scale
     pred_T = pred_T_norm * (STATS['t_max'] - STATS['t_min']) + STATS['t_min']
     
-    # 8. Force solid structure bounds to zero or base temp to match your notebook's dead zones
+    # 8. Force solid structure bounds to 0.0K to match your notebook's dead zones
     pred_T[geom_mask == 0.0] = 0.0 
     
     return pred_T
@@ -109,24 +108,32 @@ with tab1:
         st.subheader("Boundary Parameters")
         vel = st.slider("Inlet Velocity (m/s)", 0.1, 0.6, 0.35, step=0.01)
         length = st.slider("Fin Length (m)", 0.010, 0.115, 0.050, step=0.005)
-        offset = st.slider("Fin Y-Center Offset (m)", -0.0015, 0.0015, 0.0, step=0.0005)
+        offset = st.slider("Fin Y-Center Offset (m)", -0.015, 0.015, 0.0, step=0.0005)
 
     with col2:
         st.subheader("FNO Predicted Temperature Field")
         if model is not None:
             pred_T = run_interactive_inference(vel, length, offset)
             
+            # --- Dynamic Scaling Logic From Your Notebook ---
+            valid_mask = pred_T > 100  # Filter out the 0.0K dead zones
+            if np.any(valid_mask):
+                vmin = np.percentile(pred_T[valid_mask], 1)
+                vmax = np.percentile(pred_T[valid_mask], 99)
+            else:
+                vmin, vmax = STATS['t_min'], STATS['t_max']
+            
             fig, ax = plt.subplots(figsize=(12, 4))
             
-            # Using your exact inferno color mapping & extent parameters
+            # Rendering with dynamic vmin/vmax limits
             im = ax.imshow(
                 pred_T, 
                 cmap='inferno', 
                 aspect='auto', 
                 origin='lower',
                 extent=[STATS['x_min'], STATS['x_max'], STATS['y_min'], STATS['y_max']],
-                vmin=STATS['t_min'], 
-                vmax=STATS['t_max']
+                vmin=vmin, 
+                vmax=vmax
             )
             
             ax.set_title(f"FNO AI Prediction\nInlet Velocity: {vel:.2f} m/s", fontsize=12)
@@ -137,12 +144,4 @@ with tab1:
 
 with tab2:
     st.subheader("Model Validation against Ground Truth CFD")
-    
-    # --- PLACEHOLDER FOR PNG LOGIC ---
-    st.info("🚧 **Simulations Running** 🚧 \n\nA new OpenFOAM dataset is currently being generated. Once training is complete, pre-computed Matplotlib PNG comparisons will be dynamically loaded here to showcase the residual error between the Ground Truth CFD and the FNO Surrogate.")
-    
-    # Render an empty placeholder box so it doesn't look completely blank
-    fig, ax = plt.subplots(figsize=(11, 3))
-    ax.text(0.5, 0.5, "Awaiting test scenario plots...", ha='center', va='center', fontsize=14, color='gray')
-    ax.axis('off')
-    st.pyplot(fig)
+    st.info("🚧 **Simulations Running** 🚧 \n\nA new OpenFOAM dataset is currently being generated.")
