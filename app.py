@@ -44,16 +44,15 @@ model, device = load_surrogate_model()
 # ---------------------------------------------------------
 def run_interactive_inference(vel, length, offset):
     """
-    Synthesizes the 4-channel input exactly matching your dataset structure,
-    evaluates the model, and scales it back to true physical dimensions.
+    Synthesizes the 4-channel input exactly matching your true 80x2250 dataset structure.
     """
-    # 1. Regenerate coordinate meshes matching dataset dimensions
-    x = np.linspace(STATS['x_min'], STATS['x_max'], 64)
-    y = np.linspace(STATS['y_min'], STATS['y_max'], 64)
-    grid_x, grid_y = np.meshgrid(x, y)
+    # 1. Regenerate coordinate meshes using your TRUE dimensions (80 rows, 2250 columns)
+    x = np.linspace(STATS['x_min'], STATS['x_max'], 2250)
+    y = np.linspace(STATS['y_min'], STATS['y_max'], 80)
+    grid_x, grid_y = np.meshgrid(x, y)  # Outputs shape: (80, 2250)
     
-    # 2. Build the Geometry Mask dynamically based on slider values
-    geom_mask = np.ones((64, 64))
+    # 2. Build the Geometry Mask dynamically on the high-res grid
+    geom_mask = np.ones((80, 2250))
     fin_thickness = 0.02  
     
     # Solid domain boundary calculation
@@ -64,8 +63,8 @@ def run_interactive_inference(vel, length, offset):
     mask_condition = (grid_x <= length) & (grid_y >= y_lower) & (grid_y <= y_upper)
     geom_mask[mask_condition] = 0.0
                     
-    # 3. Create the input velocity array (constant value across domain)
-    u_inlet = np.ones((64, 64)) * vel
+    # 3. Create the input velocity array matching shape (80, 2250)
+    u_inlet = np.ones((80, 2250)) * vel
     
     # 4. Apply Min-Max Normalization exactly matching your dataset.py
     u_inlet_norm = (u_inlet - STATS['u_min']) / (STATS['u_max'] - STATS['u_min'] + 1e-8)
@@ -115,29 +114,28 @@ with tab1:
         if model is not None:
             pred_T = run_interactive_inference(vel, length, offset)
             
-            # --- Dynamic Scaling Logic From Your Notebook ---
-            valid_mask = pred_T > 100  # Filter out the 0.0K dead zones
+            # --- Notebook Robust Visual Percentile Bound Scaling ---
+            valid_mask = pred_T > 100  # Ignore the 0.0K dead zones for visual scaling
             if np.any(valid_mask):
                 vmin = np.percentile(pred_T[valid_mask], 1)
                 vmax = np.percentile(pred_T[valid_mask], 99)
             else:
-                vmin, vmax = STATS['t_min'], STATS['t_max']
+                vmin, vmax = 297.0, 360.0
             
-            fig, ax = plt.subplots(figsize=(12, 4))
+            fig, ax = plt.subplots(figsize=(15, 4))
             
-            # Rendering with dynamic vmin/vmax limits
+            # Matches your notebook's clean matrix coordinate plotting approach
             im = ax.imshow(
                 pred_T, 
                 cmap='inferno', 
                 aspect='auto', 
                 origin='lower',
-                extent=[STATS['x_min'], STATS['x_max'], STATS['y_min'], STATS['y_max']],
                 vmin=vmin, 
                 vmax=vmax
             )
             
-            ax.set_title(f"FNO AI Prediction\nInlet Velocity: {vel:.2f} m/s", fontsize=12)
-            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Temp (K)")
+            ax.set_title(f"FNO AI Prediction | Inlet Velocity: {vel:.2f} m/s", fontsize=12)
+            fig.colorbar(im, ax=ax, fraction=0.015, pad=0.04, label="Temp (K)")
             
             plt.tight_layout()
             st.pyplot(fig)
