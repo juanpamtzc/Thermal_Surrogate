@@ -102,43 +102,47 @@ st.markdown("Replacing heavy OpenFOAM CFD solvers with millisecond AI inference.
 tab1, tab2 = st.tabs(["🎛️ Live Parameter Sweep", "📊 Holdout Validation Scenarios"])
 
 with tab1:
-    col1, col2 = st.columns([1, 2], gap="large")
-    with col1:
-        st.subheader("Boundary Parameters")
+    # Sliders arranged at the top across 3 columns to save space and leave full width for the plot
+    st.subheader("Boundary Parameters")
+    slider_col1, slider_col2, slider_col3 = st.columns(3)
+    
+    with slider_col1:
         vel = st.slider("Inlet Velocity (m/s)", 0.1, 0.6, 0.35, step=0.01)
+    with slider_col2:
         length = st.slider("Fin Length (m)", 0.010, 0.115, 0.050, step=0.005)
+    with slider_col3:
         offset = st.slider("Fin Y-Center Offset (m)", -0.015, 0.015, 0.0, step=0.0005)
 
-    with col2:
-        st.subheader("FNO Predicted Temperature Field")
-        if model is not None:
-            pred_T = run_interactive_inference(vel, length, offset)
-            
-            # --- Notebook Robust Visual Percentile Bound Scaling ---
-            valid_mask = pred_T > 100  # Ignore the 0.0K dead zones for visual scaling
-            if np.any(valid_mask):
-                vmin = np.percentile(pred_T[valid_mask], 1)
-                vmax = np.percentile(pred_T[valid_mask], 99)
-            else:
-                vmin, vmax = 297.0, 360.0
-            
-            fig, ax = plt.subplots(figsize=(15, 4))
-            
-            # Matches your notebook's clean matrix coordinate plotting approach
-            im = ax.imshow(
-                pred_T, 
-                cmap='inferno', 
-                aspect='auto', 
-                origin='lower',
-                vmin=vmin, 
-                vmax=vmax
-            )
-            
-            ax.set_title(f"FNO AI Prediction | Inlet Velocity: {vel:.2f} m/s", fontsize=12)
-            fig.colorbar(im, ax=ax, fraction=0.015, pad=0.04, label="Temp (K)")
-            
-            plt.tight_layout()
-            st.pyplot(fig)
+    st.markdown("---")
+    st.subheader("FNO Predicted Temperature Field")
+    
+    if model is not None:
+        pred_T = run_interactive_inference(vel, length, offset)
+        
+        # Exact notebook physical bounds matching your fluid scenario requirements
+        vmin = 297.0
+        vmax = 360.0
+        
+        # Matches notebook individual subplot dims: 12 width, 3 height (9 total / 3 rows)
+        fig, ax = plt.subplots(figsize=(12, 3))
+        
+        # Identical imshow parameters used in your notebook script
+        im = ax.imshow(
+            pred_T, 
+            cmap='inferno', 
+            aspect='auto', 
+            origin='lower',
+            vmin=vmin, 
+            vmax=vmax
+        )
+        
+        ax.set_title("FNO AI Prediction", fontsize=12)
+        
+        # Identical colorbar proportions and padding from the notebook
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Temp (K)")
+        
+        plt.tight_layout()
+        st.pyplot(fig, use_container_width=True)
 
 with tab2:
     st.subheader("Model Validation against Ground Truth CFD")
