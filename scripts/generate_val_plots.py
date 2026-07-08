@@ -15,6 +15,8 @@ def generate_validation_plots():
     MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
     ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
     
+    NUM_PLOTS = 15
+
     os.makedirs(ASSETS_DIR, exist_ok=True)
 
     # 1. Load Stats
@@ -41,24 +43,21 @@ def generate_validation_plots():
             except Exception:
                 continue
 
-    if len(valid_cases) < 3:
-        print("Not enough valid test cases found to generate 3 diverse plots!")
+    if len(valid_cases) < NUM_PLOTS:
+        print("Not enough valid test cases found to generate {NUM_PLOTS} diverse plots!")
         return
 
     valid_cases.sort(key=lambda x: x[0])
     
-    # Pick Lowest, Median, and Highest velocity cases
-    test_cases = [
-        valid_cases[0][1],                  
-        valid_cases[len(valid_cases)//2][1], 
-        valid_cases[-1][1]                  
-    ]
+    # Evenly sample across the sorted velocity distribution
+    indices = np.linspace(0, len(valid_cases) - 1, NUM_PLOTS).astype(int)
+    test_cases = [valid_cases[idx][1] for idx in indices]
 
     physical_extent = [0.0, 0.22125, -0.004075, 0.004075]
 
     for i, case_path in enumerate(test_cases):
         case_name = os.path.basename(case_path)
-        print(f"Plotting diverse case {i+1}/3: {case_name}...")
+        print(f"Plotting diverse case {i+1}/{NUM_PLOTS}: {case_name}...")
 
         # Load raw arrays
         geom_mask = np.load(os.path.join(case_path, "geom_mask.npy"))
