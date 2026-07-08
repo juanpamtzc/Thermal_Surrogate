@@ -100,7 +100,7 @@ def run_interactive_inference(vel, length, offset):
 # ---------------------------------------------------------
 # 4. Main UI Layout
 # ---------------------------------------------------------
-st.title("⚙️ SciML Multi-Physics FNO Surrogate Engine")
+st.title("SciML Multi-Physics FNO Thermal Surrogate Engine")
 st.markdown("Real-time prediction of Fluid Dynamics and Heat Transfer, bypassing the OpenFOAM CFD solver.")
 
 tab1, tab2, tab3 = st.tabs(["🎛️ Live Parameter Sweep", "📊 Architecture Overview", "🔍 CFD Ground Truth Validation"])
