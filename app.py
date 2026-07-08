@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import random
+import graphviz
 
 # Ensure local src directory is visible to Python
 sys.path.append(os.path.dirname(__file__))
@@ -143,13 +144,87 @@ with tab1:
         st.pyplot(fig, use_container_width=True)
 
 with tab2:
-    st.subheader("FNO Architecture & Physical Modeling Assumptions")
+    st.subheader("Fourier Neural Operator (FNO) Architecture")
     st.markdown("""
-    * **Input Tensor:** `[4, 82, 2212]` (Geometry Mask, Inlet Velocity, Grid X, Grid Y)
-    * **Output Tensor:** `[2, 82, 2212]` (Converged Temperature, Converged Velocity)
-    * **Resolution:** 2,212 × 82 Spatial Grid
-    * **Mapping:** Learned via 4 layers of Spectral Convolutions retaining 12 and 32 Fourier modes respectively.
-    * **Heat Generation:** Fins have a fixed volumetric heat generation rate, held constant across the training set and not exposed as a controllable parameter.
+    Unlike traditional CNNs that learn localized pixel kernels, the Fourier Neural Operator learns the **Green's function** of the governing Partial Differential Equations (PDEs) in the frequency domain. This allows it to evaluate fluid dynamics and heat transfer at any mesh resolution without retraining.
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 1. Macroscopic FNO Pipeline")
+        st.markdown("The spatial inputs are lifted to a higher-dimensional latent space, passed through 4 frequency-domain convolutions, and projected back to physical physics scales.")
+        
+        # Macro Architecture Diagram
+        macro_graph = graphviz.Digraph(node_attr={'shape': 'box', 'style': 'rounded,filled', 'fontname': 'Helvetica'})
+        macro_graph.attr(rankdir='TB') # Top to Bottom
+        
+        macro_graph.node('in', 'Input Tensor X\n[4, 82, 2212]\n(Mask, Inlet_U, Grid_X, Grid_Y)', fillcolor='#E1F5FE')
+        macro_graph.node('p', 'Linear Lifting Layer (P)\nChannels: 4 → 32', fillcolor='#FFF9C4')
+        macro_graph.node('f1', 'Fourier Layer 1 (Modes: 12, 32)', fillcolor='#C8E6C9')
+        macro_graph.node('f2', 'Fourier Layer 2 (Modes: 12, 32)', fillcolor='#C8E6C9')
+        macro_graph.node('f3', 'Fourier Layer 3 (Modes: 12, 32)', fillcolor='#C8E6C9')
+        macro_graph.node('f4', 'Fourier Layer 4 (Modes: 12, 32)', fillcolor='#C8E6C9')
+        macro_graph.node('q', 'Projection Layer (Q)\nMLP: 32 → 128 → 2', fillcolor='#FFF9C4')
+        macro_graph.node('out', 'Output Tensor Y\n[2, 82, 2212]\n(Temperature, Velocity)', fillcolor='#FCE4EC')
+        
+        macro_graph.edge('in', 'p')
+        macro_graph.edge('p', 'f1')
+        macro_graph.edge('f1', 'f2')
+        macro_graph.edge('f2', 'f3')
+        macro_graph.edge('f3', 'f4')
+        macro_graph.edge('f4', 'q')
+        macro_graph.edge('q', 'out')
+        
+        st.graphviz_chart(macro_graph, use_container_width=True)
+
+    with col2:
+        st.markdown("### 2. Microscopic Spectral Convolution")
+        st.markdown("Inside each Fourier block, the signal splits. The upper branch performs operations in the Fourier domain to capture global physics, while the lower branch acts as a spatial bypass.")
+        
+        # Micro Architecture Diagram
+        micro_graph = graphviz.Digraph(node_attr={'shape': 'box', 'style': 'rounded,filled', 'fontname': 'Helvetica'})
+        micro_graph.attr(rankdir='TB')
+        
+        micro_graph.node('v_in', 'Input v(x)', fillcolor='#EEEEEE')
+        
+        # Global Branch (Frequency Domain)
+        micro_graph.node('fft', '2D Fast Fourier Transform\n(FFT)', fillcolor='#D1C4E9')
+        micro_graph.node('trunc', 'Truncate High Frequencies\n(Keep lowest 12x32 modes)', fillcolor='#D1C4E9')
+        micro_graph.node('mul', 'Complex Weight Multiplication\n(Learnable PDE Operator)', fillcolor='#D1C4E9')
+        micro_graph.node('ifft', '2D Inverse FFT\n(iFFT)', fillcolor='#D1C4E9')
+        
+        # Local Branch (Spatial Domain)
+        micro_graph.node('w', 'Local Linear Transform (W)\n(1x1 Spatial Convolution)', fillcolor='#FFE0B2')
+        
+        # Addition and Activation
+        micro_graph.node('add', 'Element-wise Addition (+)', shape='circle', fillcolor='#CFD8DC')
+        micro_graph.node('act', 'GELU Activation', fillcolor='#FFF9C4')
+        micro_graph.node('v_out', 'Output v(x\')', fillcolor='#EEEEEE')
+        
+        # Edges Global
+        micro_graph.edge('v_in', 'fft')
+        micro_graph.edge('fft', 'trunc')
+        micro_graph.edge('trunc', 'mul')
+        micro_graph.edge('mul', 'ifft')
+        micro_graph.edge('ifft', 'add')
+        
+        # Edges Local
+        micro_graph.edge('v_in', 'w')
+        micro_graph.edge('w', 'add')
+        
+        # Edges Out
+        micro_graph.edge('add', 'act')
+        micro_graph.edge('act', 'v_out')
+        
+        st.graphviz_chart(micro_graph, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("Physical Modeling Constraints")
+    st.markdown("""
+    * **Boundary Layer Adherence:** Masking enforces absolute no-slip conditions (`Velocity = 0.0 m/s`) within the solid fin boundaries.
+    * **Conjugate Heat Transfer (CHT):** Solid fin domains are simulated with a constant volumetric heat generation rate. This rate is fixed globally across the simulation dataset and acts as the implicit driving thermal force for the PDEs.
+    * **Spatial Mapping:** By utilizing actual coordinates `(X, Y)` as input channels alongside the geometry mask, the FNO successfully maps fluid dynamics without requiring traditional body-fitted meshing configurations.
     """)
 
 with tab3:
